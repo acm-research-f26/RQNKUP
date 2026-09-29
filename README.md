@@ -42,13 +42,55 @@ HAWQ-V3 solves both: it runs models with integer-only arithmetic, and once layer
     * Real Hardware Latency (ms/image) and Speedup vs. uniform INT8 on a T4 GPU via TVM (CUDA 10.2, Google Cloud Platform)
     * TVM and PyTorch outputs verified to match layer by layer to machine precision, including the final Top-1 accuracy
 
-7. **results:**
-    * **ResNet-50 (ImageNet):** Reached **77.58% Top-1 accuracy** with uniform INT8 (FP32 baseline 77.72%), **2.68 percentage points higher** than prior integer-only work (Jacob et al., 74.90%, which starts from a weaker 76.40% FP32 baseline). With mixed 4/8-bit under the medium BOPS constraint, it reached **75.39%** (18.7MB, 154 GBOPS), about **1.23× faster** than uniform INT8; distillation raises this to 76.73%. Uniform INT4 reached 74.24% (13.1MB, 67 GBOPS, 1.45× faster than INT8). Uniform INT8 latency is 1.06 ms/image.
-    * **ResNet-18 (ImageNet):** Reached **71.56% Top-1 accuracy** with uniform INT8, 0.09 percentage points above the FP32 baseline (71.47%). With mixed 4/8-bit under the medium BOPS constraint, it reached 70.22% (6.7MB, 72 GBOPS, 1.21× faster), or 70.38% with distillation. Uniform INT4 reached 68.45% (5.8MB and 34 GBOPS per Table 1; 1.48× faster than INT8 per Table 2). Uniform INT8 latency is 0.40 ms/image.
-    * **Inception-V3 (ImageNet):** Reached **78.76% Top-1 accuracy** with uniform INT8 (FP32 baseline 78.88%), **4.56 percentage points higher** than prior integer-only work (Jacob et al., 74.20%, from a 78.30% FP32 baseline). Mixed 4/8-bit reached 74.65% (19.6MB, 265 GBOPS), or 74.72% with distillation. Uniform INT4 reached 70.39% (12.3MB, 92 GBOPS). No latency was reported for Inception-V3.
-    * **First integer-only INT4 results:** To the authors' knowledge, these are the first integer-only 4-bit results reported. At W4A4 they also exceed CalibTIB, a post-training method that uses FP32 casting (ResNet-18: 68.45% vs 67.50%; ResNet-50: 74.24% vs 73.70%).
-    * **Constraint sweeps:** The ILP was run with model size, BOPS, or latency limits, each at High/Medium/Low levels. For example, capping ResNet-18 at 7.9MB (roughly midway between INT4's 5.6MB and INT8's 11.2MB) gave 70.50%, or 71.09% with distillation, close to INT8's 71.56% while running 1.06× faster. Requesting a 1.19× latency speedup gave 70.34%, or 70.55% with distillation, at 7.2MB.
-    * **Distillation** helped mixed precision the most (+1.34 percentage points on ResNet-50), with little to no gain for uniform INT8 or INT4.
+7. **Results:**
+
+   - **Uniform quantization (Table 1):**
+     - **ResNet-18:** INT8 **71.56%** (FP32 71.47%, 11.1MB, 116 GBOPS); INT4 68.45% (5.8MB, 34 GBOPS).
+     - **ResNet-50:** INT8 **77.58%** (FP32 77.72%, 24.5MB, 247 GBOPS), 2.68 percentage points above prior integer-only work (Jacob et al., 74.90%, from a weaker 76.40% FP32 baseline); INT4 74.24% (13.1MB, 67 GBOPS).
+     - **Inception-V3:** INT8 **78.76%** (FP32 78.88%, 22.7MB, 366 GBOPS), 4.56 percentage points above Jacob et al. (74.20%, from a 78.30% FP32 baseline); INT4 70.39% (12.3MB, 92 GBOPS).
+     - To the authors' knowledge, these are the first integer-only INT4 results reported. At W4A4 they also exceed CalibTIB, a post-training method that uses FP32 casting (ResNet-18: 68.45% vs 67.50%; ResNet-50: 74.24% vs 73.70%).
+
+   - **Mixed-precision INT4/8 (Table 2):** the ILP picks 4 or 8 bits per layer under a model size, BOPS, or latency limit, each at High/Medium/Low levels. Weights and activations of a layer share one bit-width (W4/8A4/8). Speed is measured on a T4 GPU via TVM, relative to uniform INT8 (0.40 ms/image for ResNet-18, 1.06 ms/image for ResNet-50). Top-1 is shown without / with distillation. Table 2's size and BOPS for the uniform baselines differ slightly from Table 1; both are reproduced as reported. The mixed-precision entries in Table 1 correspond to the BOPS-Medium rows below.
+
+     **ResNet-18**
+
+     | Constraint | Level | Size (MB) | BOPS (G) | Speed | Top-1 (%) |
+     |---|---|---|---|---|---|
+     | Uniform INT8 | – | 11.2 | 114 | 1.00× | 71.56 |
+     | Size | High | 9.9 | 103 | 1.03× | 71.20 / 71.59 |
+     | Size | Medium | 7.9 | 98 | 1.06× | 70.50 / 71.09 |
+     | Size | Low | 7.3 | 95 | 1.08× | 70.01 / 70.66 |
+     | BOPS | High | 8.7 | 92 | 1.12× | 70.40 / 71.05 |
+     | BOPS | Medium | 6.7 | 72 | 1.21× | 70.22 / 70.38 |
+     | BOPS | Low | 6.1 | 54 | 1.35× | 68.72 / 69.72 |
+     | Latency | High | 8.7 | 92 | 1.12× | 70.40 / 71.05 |
+     | Latency | Medium | 7.2 | 76 | 1.19× | 70.34 / 70.55 |
+     | Latency | Low | 6.1 | 54 | 1.35× | 68.56 / 69.72 |
+     | Uniform INT4 | – | 5.6 | 28 | 1.48× | 68.45 |
+
+     **ResNet-50**
+
+     | Constraint | Level | Size (MB) | BOPS (G) | Speed | Top-1 (%) |
+     |---|---|---|---|---|---|
+     | Uniform INT8 | – | 24.5 | 247 | 1.00× | 77.58 |
+     | Size | High | 21.3 | 226 | 1.09× | 77.38 / 77.58 |
+     | Size | Medium | 19.0 | 197 | 1.13× | 75.95 / 76.96 |
+     | Size | Low | 16.0 | 168 | 1.18× | 74.89 / 76.51 |
+     | BOPS | High | 22.0 | 197 | 1.16× | 76.10 / 76.76 |
+     | BOPS | Medium | 18.7 | 154 | 1.23× | 75.39 / 76.73 |
+     | BOPS | Low | 16.7 | 110 | 1.30× | 74.45 / 76.03 |
+     | Latency | High | 22.3 | 199 | 1.13× | 76.63 / 76.97 |
+     | Latency | Medium | 18.5 | 155 | 1.21× | 74.95 / 76.39 |
+     | Latency | Low | 16.5 | 114 | 1.28× | 74.26 / 76.19 |
+     | Uniform INT4 | – | 13.1 | 67 | 1.45× | 74.24 |
+
+     **Inception-V3** (Table 1; no latency reported): mixed INT4/8 reached **74.65%**, or 74.72% with distillation (19.6MB, 265 GBOPS), between uniform INT8 (78.76%, 22.7MB, 366 GBOPS) and uniform INT4 (70.39%, 12.3MB, 92 GBOPS).
+
+   - **Takeaways:**
+     - Mixed precision fills the gap between uniform INT8 and INT4. For example, ResNet-18 capped at 7.9MB (roughly midway between INT4 and INT8) keeps 71.09% with distillation, close to INT8, while running 1.06× faster.
+     - Model size and BOPS are only weakly correlated, and model size doesn't directly track accuracy. On ResNet-50, Size-High (21.3MB) scores 77.58% with distillation, higher than BOPS-High (22.0MB, 76.76%).
+     - Distillation helps mixed precision the most; the authors report little to no improvement for uniform INT8 or INT4. Their highlighted example is +1.34 percentage points for ResNet-50 BOPS-Medium (the Table 1 configuration), and the gain in Table 2 reaches +1.93 for ResNet-50 Latency-Low. Gains are largest at tight budgets, where more layers are at 4 bits.
+     - **Note for comparison with our notebook:** all INT4 and mixed-precision numbers above come from quantization-aware fine-tuning with a fully integer-only pipeline (BN folded into the convolutions, integer-only residual and concatenation layers). Our notebook uses post-training fake quantization with no fine-tuning, so the two are not directly comparable. This is why our uniform INT4 collapses while the paper's reaches 68–74%.
   
 ## ⛰︎ impact
 HAWQ-V3 showed that neural networks can run with integer-only arithmetic (integer multiplication, integer addition, and bit shifting) and no floating-point fallback, including for batch normalization, residual connections, and concatenation. By combining Hessian-based sensitivity with a hardware-aware Integer Linear Programming solver, it showed that mixed-precision bit allocation can be solved in under a second once sensitivities are computed (under 30 minutes of Hessian trace computation for ResNet-50/Inception-V3 on 4 GPUs). The quantized models were deployed on real hardware (T4 GPUs via TVM), achieving measured speedups over INT8 of up to 1.48× for uniform INT4 and up to 1.35× for mixed INT4/8.
