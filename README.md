@@ -42,7 +42,7 @@ HAWQ-V3 solves both: it runs models with integer-only arithmetic, and once layer
     * Real Hardware Latency (ms/image) and Speedup vs. uniform INT8 on a T4 GPU via TVM (CUDA 10.2, Google Cloud Platform)
     * TVM and PyTorch outputs verified to match layer by layer to machine precision, including the final Top-1 accuracy
 
-7. **Results:**
+7. **[Results: ](https://drive.google.com/drive/folders/1FFBPrqUA9TktnjNikrIZcRLiyMFb2oCT?usp=sharing)**
 
    - **Uniform quantization (Table 1):**
      - **ResNet-18:** INT8 **71.56%** (FP32 71.47%, 11.1MB, 116 GBOPS); INT4 68.45% (5.8MB, 34 GBOPS).
