@@ -1,4 +1,4 @@
-# RQNKUP implementations | readme format template
+# RQNKUP implementations
 
 **paper title:** AWQ: Activation-aware Weight Quantization for On-Device LLM Compression and Acceleration
 
